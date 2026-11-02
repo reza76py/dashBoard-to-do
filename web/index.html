@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>Project Compass — Your project command centre</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <div class="shell">
+    <aside class="sidebar" id="sidebar">
+      <div class="brand"><div class="brand-icon">◈</div><div><b>Project Compass</b><small>Personal command centre</small></div></div>
+      <nav class="side-nav" aria-label="Main navigation">
+        <button type="button" class="nav-item active" data-view="dashboard"><span>▦</span> Dashboard</button>
+        <button type="button" class="nav-item" data-view="home"><span>⌂</span> Home · All projects</button>
+        <button type="button" class="nav-item" data-view="ideas"><span>✦</span> Ideas inbox</button>
+      </nav>
+      <div class="sidebar-bottom"><div class="help-card"><b>One place. Less noise.</b><p>Capture the idea, pick your focus, and keep your progress moving.</p></div><p class="version">Version 1 · Local-first</p></div>
+    </aside>
+    <main class="main">
+      <header class="topbar">
+        <button class="mobile-menu ghost" type="button" id="menuBtn" aria-label="Toggle menu">☰</button>
+        <div class="breadcrumbs" id="breadcrumbs">Overview / Dashboard</div>
+        <div class="top-actions"><span id="saveStatus" class="save-status">● Ready</span><button class="icon-btn" id="themeBtn" type="button" title="Toggle theme">☾</button><button class="btn btn-primary" id="addBtn" type="button"><span>＋</span> New project</button></div>
+      </header>
+      <div class="content" id="content" aria-live="polite"></div>
+    </main>
+  </div>
+  <div class="modal-backdrop hidden" id="modalBackdrop"><section class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle" id="modal"></section></div>
+  <input type="file" id="importFile" accept="application/json,.json" class="hidden">
+  <div id="toast" class="toast hidden" role="status"></div>
+  <script src="/app.js" defer></script>
+</body>
+</html>
