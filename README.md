@@ -11,6 +11,18 @@ A Windows-friendly **local-first** project dashboard that runs without a subscri
 
 Or, in a terminal from this folder: `python server.py`.
 
+## Run from the system tray
+
+The tray launcher keeps the server running in the background with an icon near the clock. Closing the browser window does not stop it.
+
+1. Install the tray packages once (the server itself still needs none): `python -m pip install -r requirements.txt`
+2. Start it: `pythonw tray.py` (no console window). The app opens and a purple **PC** icon appears in the tray (check the **^** overflow if hidden).
+3. **Left-click** the icon (or right-click → **Open Project Compass**) to open the app window again.
+4. Right-click → **Quit** stops the server and removes the icon.
+5. To start it automatically when you sign in, double-click **`enable_windows_autostart.bat`**. It replaces any older Project Compass startup shortcut. To disable it, delete **Project Compass** from `shell:startup`.
+
+If the app is already running, launching `tray.py` again just opens the window. Tray errors are logged to `data/tray.log`. Don't run `start_windows.bat` while the tray is running.
+
 ## Today’s workflow
 
 - **Dashboard:** Your three pinned/highest priority projects, their completion, progress change over 7 days, and a line chart versus on-hold average.
@@ -23,7 +35,7 @@ Or, in a terminal from this folder: `python server.py`.
 
 Your projects are stored in **`data/projects.sqlite3`** on your computer; the app listens only on **127.0.0.1**. No cloud service is used. To back up everything, use Export JSON and also copy the SQLite file after stopping the server.
 
-**Limitations of V1:** This does not synchronise with your phone or cloud, run AI, inspect Windows files, send reminders, automatically start with Windows, or offer team collaboration. A Chrome/Edge browser window is used instead of a native desktop application. All those are future phases. Progress is entered manually in V1; the chart uses that history, not fabricated AI analysis. Window size/position is managed by your browser/OS and is not guaranteed to be restored in this version.
+**Limitations of V1:** This does not synchronise with your phone or cloud, run AI, inspect Windows files, send reminders, or offer team collaboration. A Chrome/Edge browser window is used instead of a native desktop application. All those are future phases. Progress is entered manually in V1; the chart uses that history, not fabricated AI analysis. Window size/position is managed by your browser/OS and is not guaranteed to be restored in this version.
 
 ## Privacy
 
