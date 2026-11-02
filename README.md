@@ -21,6 +21,8 @@ The tray launcher keeps the server running in the background with an icon near t
 4. Right-click → **Quit** stops the server and removes the icon.
 5. To start it automatically when you sign in, double-click **`enable_windows_autostart.bat`**. It replaces any older Project Compass startup shortcut. To disable it, delete **Project Compass** from `shell:startup`.
 
+6. For a Desktop icon, double-click **`create_desktop_shortcut.bat`** once. The **Project Compass** shortcut (or `open_compass.bat`) can be double-clicked anytime.
+
 If the app is already running, launching `tray.py` again just opens the window. Tray errors are logged to `data/tray.log`. Don't run `start_windows.bat` while the tray is running.
 
 ## Today’s workflow
