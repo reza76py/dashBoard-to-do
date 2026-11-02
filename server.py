@@ -52,7 +52,7 @@ def sample_state():
             example_project('Example · English learning', 'active', 3, 32, [12, 16, 20, 22, 32], 'Personal', True),
             example_project('Example · Business idea', 'on_hold', 4, 25, [10, 18, 25, 25, 25], 'Business'),
         ],
-        'settings': {'theme': 'light'},
+        'settings': {'theme': 'dark'},
         'demo': True,
     }
 

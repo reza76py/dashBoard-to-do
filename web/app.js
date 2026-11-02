@@ -12,9 +12,9 @@ const COLORS = ['#665bee','#13a77d','#f1a23a','#929db3'];
 let state = null, view='dashboard', currentId=null, query='', filter='all', saving=Promise.resolve(), toastHandle;
 
 function toast(message){ const el=$('#toast'); el.textContent=message; el.classList.remove('hidden'); clearTimeout(toastHandle); toastHandle=setTimeout(()=>el.classList.add('hidden'),2800); }
-function save(){
+function save(data=state){
   $('#saveStatus').textContent='● Saving…'; $('#saveStatus').classList.remove('error');
-  const snapshot=JSON.stringify(state);
+  const snapshot=JSON.stringify(data);
   saving=saving.catch(()=>{}).then(async()=>{
     const res=await fetch('/api/state',{method:'PUT',headers:{'Content-Type':'application/json'},body:snapshot});
     if(!res.ok) throw new Error(`Save error ${res.status}`);
@@ -25,13 +25,13 @@ function save(){
 function record(p, text){ p.activity ??=[];p.activity.unshift({at:nowISO(), text});p.activity=p.activity.slice(0,150);p.updatedAt=nowISO(); }
 function commit(renderAll=true){save();if(renderAll) render();}
 function projects(){return state.projects.filter(p=>p.kind!=='idea');}
-function ordered(){return projects().filter(p=>p.status!=='archived' && p.status!=='cancelled').sort((a,b)=> Number(b.pinned)-Number(a.pinned)||Number(a.priority||99)-Number(b.priority||99));}
+function ordered(){return projects().filter(p=>p.status==='active').sort((a,b)=> Number(b.pinned)-Number(a.pinned)||Number(a.priority||99)-Number(b.priority||99));}
 function leaders(){return ordered().slice(0,3);}
 function lastWeekValue(p){const threshold=Date.now()-7*864e5;const historical=(p.history||[]).filter(h=>new Date(h.date+'T23:59:59').getTime()<=threshold).sort((a,b)=>a.date.localeCompare(b.date));return historical.length ? n(historical.at(-1).progress) : null;}
 function delta(p){const old=lastWeekValue(p);return old===null ? null : n(p.progress)-old;}
 function statusLabel(st){return STATUS.find(x=>x[0]===st)?.[1] || st;}
 function selectOptions(entries, val){return entries.map(([v,t])=>`<option value="${esc(v)}" ${v===val?'selected':''}>${esc(t)}</option>`).join('');}
-function themeSync(){document.documentElement.setAttribute('data-theme',state.settings.theme||'light');$('#themeBtn').textContent=state.settings.theme==='dark'?'☀':'☾';}
+function themeSync(){const theme=state.settings.theme||'dark';document.documentElement.setAttribute('data-theme',theme);$('#themeBtn').textContent=theme==='dark'?'☀':'☾';}
 function render(){themeSync();$('#breadcrumbs').textContent = view==='dashboard'?'Overview / Dashboard':view==='ideas'?'Workspace / Ideas':'Workspace / All projects';$$('.nav-item').forEach(btn=>btn.classList.toggle('active',btn.dataset.view===view));$('#content').innerHTML=view==='dashboard'?dashboard():listing();bindContent();}
 function dashboard(){
  const ps=projects(), ls=leaders(), active=ps.filter(p=>p.status==='active').length, hold=ps.filter(p=>p.status==='on_hold').length, completed=ps.filter(p=>p.status==='completed').length;
@@ -64,8 +64,8 @@ function listing(){const ideaView=view==='ideas',items=state.projects.filter(p=>
  ${state.demo?'<p class="inline-note">Example projects are placeholders. <button type="button" class="btn btn-danger btn-sm" data-action="remove-examples">Remove sample projects</button></p>':''}`;}
 function bindContent(){ $$('[data-action]').forEach(b=>b.onclick=()=>action(b.dataset.action));$$('[data-open]').forEach(b=>b.onclick=()=>details(b.dataset.open));$$('[data-pin]').forEach(b=>b.onclick=()=>togglePin(b.dataset.pin));if($('#searchBox'))$('#searchBox').oninput=e=>{query=e.target.value;render();const input=$('#searchBox');input.focus();input.setSelectionRange(input.value.length,input.value.length);};if($('#filterBox'))$('#filterBox').onchange=e=>{filter=e.target.value;render();};}
 function action(a){if(a==='home'){view='home';query='';filter='all';render();}else if(a==='add-project')addModal('project');else if(a==='add-idea')addModal('idea');else if(a==='export')exportJSON();else if(a==='csv')exportCSV();else if(a==='import')$('#importFile').click();else if(a==='remove-examples')removeExamples();}
-function togglePin(id){const p=state.projects.find(p=>p.id===id);if(!p)return;if(!p.pinned && state.projects.filter(x=>x.pinned && x.id!==id).length>=3){toast('Unpin one of the three pinned projects first.');return;}p.pinned=!p.pinned;record(p,p.pinned?'Pinned to dashboard':'Unpinned from dashboard');commit();}
-function modal(content){$('#modal').innerHTML=content;$('#modalBackdrop').classList.remove('hidden');$('#modal').scrollTop=0;$('.x','#modal').onclick=closeModal;}
+function togglePin(id){const p=state.projects.find(p=>p.id===id);if(!p)return;if(!p.pinned && state.projects.filter(x=>x.pinned && x.id!==id && x.kind!=='idea' && x.status!=='archived' && x.status!=='cancelled').length>=3){toast('Unpin one of the three pinned projects first.');return;}p.pinned=!p.pinned;record(p,p.pinned?'Pinned to dashboard':'Unpinned from dashboard');commit();}
+function modal(content){$('#modal').innerHTML=content;$('#modalBackdrop').classList.remove('hidden');$('#modal').scrollTop=0;$('.x',$('#modal')).onclick=closeModal;}
 function closeModal(){currentId=null;$('#modalBackdrop').classList.add('hidden');$('#modal').innerHTML='';}
 function formValue(id){return ($('#'+id)?.value||'').trim();}
 function confirmInside(title, message, actionLabel, callback){
@@ -92,22 +92,22 @@ function details(id){const p=state.projects.find(p=>p.id===id);if(!p)return;curr
  <div class="divider"></div><div class="section-head"><h2>Activity history</h2></div><div class="activity">${(p.activity||[]).slice(0,12).map(a=>`<p><time>${esc(fmtDate(a.at))}</time>${esc(a.text)}</p>`).join('')||'<p class="note">No activity recorded.</p>'}</div>
  <div class="modal-actions"><button type="button" class="btn btn-danger btn-sm" id="deleteProject">Delete ${p.kind}</button><span class="note">Export JSON before deleting important projects.</span></div>`);
  $('#editProgress').oninput=e=>$('#progressValue').textContent=n(e.target.value)+'%';
- $('#detailsForm').onsubmit=e=>{e.preventDefault();const old=n(p.progress);p.title=formValue('editTitle');if(!p.title){toast('Project name is required');return;}p.status=formValue('editStatus');p.priority=Number(formValue('editPriority'));p.category=formValue('editCategory');p.deadline=formValue('editDeadline');p.tags=formValue('editTags').split(',').map(x=>x.trim()).filter(Boolean);p.progress=n($('#editProgress').value);p.goals=formValue('editGoals');p.notes=formValue('editNotes');p.folder=formValue('editFolder');p.example=false;if(p.progress!==old){p.history??=[];p.history.push({date:today(),progress:p.progress});}record(p,`Saved details${old!==p.progress?`; progress ${old}% → ${p.progress}%`:''}`);state.demo=state.projects.some(x=>x.example);commit();details(id);toast('Project saved');};
+ $('#detailsForm').onsubmit=e=>{e.preventDefault();const old=n(p.progress);const title=formValue('editTitle');if(!title){toast('Project name is required');return;}p.title=title;p.status=formValue('editStatus');p.priority=Number(formValue('editPriority'));p.category=formValue('editCategory');p.deadline=formValue('editDeadline');p.tags=formValue('editTags').split(',').map(x=>x.trim()).filter(Boolean);p.progress=n($('#editProgress').value);p.goals=formValue('editGoals');p.notes=formValue('editNotes');p.folder=formValue('editFolder');if(p.progress!==old){p.history??=[];p.history.push({date:today(),progress:p.progress});}record(p,`Saved details${old!==p.progress?`; progress ${old}% → ${p.progress}%`:''}`);state.demo=state.projects.some(x=>x.example);commit();details(id);toast('Project saved');};
  $('#pinDetail').onclick=()=>{togglePin(id);closeModal();};
- if($('#promoteBtn'))$('#promoteBtn').onclick=()=>{if(!confirm('Turn this idea into an active project?'))return;p.kind='project';p.status='planned';record(p,'Promoted idea into project');commit();details(id);};
- $('#taskAddBtn').onclick=()=>{const text=formValue('newTask');if(!text)return;p.tasks??=[];p.tasks.push({id:uid(),text,done:false});p.example=false;record(p,'Added task: '+text);state.demo=state.projects.some(x=>x.example);commit();details(id);};
- $$('[data-task]','#modal').forEach(c=>c.onchange=()=>{const t=p.tasks.find(t=>t.id===c.dataset.task);if(!t)return;t.done=c.checked;record(p,`${t.done?'Completed':'Reopened'} task: ${t.text}`);commit();details(id);});
- $$('[data-delete-task]','#modal').forEach(b=>b.onclick=()=>{p.tasks=p.tasks.filter(t=>t.id!==b.dataset.deleteTask);record(p,'Removed a task');commit();details(id);});
+ if($('#promoteBtn'))$('#promoteBtn').onclick=()=>{if(!confirm('Turn this idea into a planned project?'))return;p.kind='project';p.status='planned';record(p,'Promoted idea into project');commit();details(id);};
+ $('#taskAddBtn').onclick=()=>{const text=formValue('newTask');if(!text)return;p.tasks??=[];p.tasks.push({id:uid(),text,done:false});record(p,'Added task: '+text);state.demo=state.projects.some(x=>x.example);commit();details(id);};
+ $$('[data-task]',$('#modal')).forEach(c=>c.onchange=()=>{const t=p.tasks.find(t=>t.id===c.dataset.task);if(!t)return;t.done=c.checked;record(p,`${t.done?'Completed':'Reopened'} task: ${t.text}`);commit();details(id);});
+ $$('[data-delete-task]',$('#modal')).forEach(b=>b.onclick=()=>{p.tasks=p.tasks.filter(t=>t.id!==b.dataset.deleteTask);record(p,'Removed a task');commit();details(id);});
  $('#deleteProject').onclick=()=>confirmInside('Delete project', `Permanently delete "${p.title}"? This cannot be undone. Export a backup first if needed.`, 'Delete permanently', ()=>{state.projects=state.projects.filter(x=>x.id!==id);state.demo=state.projects.some(x=>x.example);closeModal();commit();toast('Project deleted');});
 }
 function downloadFile(name,type,content){const blob=new Blob([content],{type}),url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);}
 function exportJSON(){downloadFile(`project-compass-backup-${today()}.json`,'application/json',JSON.stringify(state,null,2));toast('JSON backup downloaded');}
 function exportCSV(){const headers=['Title','Type','Status','Priority','Progress %','Category','Tags','Deadline','Goals','Notes','Folder'];const value=p=>[p.title,p.kind,p.status,p.priority,p.progress,p.category,(p.tags||[]).join('; '),p.deadline,p.goals,p.notes,p.folder];const quote=x=>'"'+String(x??'').replace(/"/g,'""')+'"';const csv=[headers,...state.projects.map(value)].map(row=>row.map(quote).join(',')).join('\r\n');downloadFile(`project-compass-projects-${today()}.csv`,'text/csv;charset=utf-8','\ufeff'+csv);toast('CSV exported (JSON is the complete backup)');}
-async function importJSON(file){try{const obj=JSON.parse(await file.text());if(!obj || obj.schemaVersion!==1 || !Array.isArray(obj.projects) || !obj.projects.every(p=>typeof p.id==='string' && typeof p.title==='string'))throw Error('Not a Project Compass V1 backup.');if(!confirm(`Replace your current ${state.projects.length} records with ${obj.projects.length} imported records? Export your current data first if needed.`))return;state={schemaVersion:1,projects:obj.projects,settings:obj.settings||{theme:'light'},demo:!!obj.demo};await save();closeModal();view='dashboard';render();toast('Backup imported successfully');}catch(e){toast(`Import failed: ${e.message}`);}}
+async function importJSON(file){try{const obj=JSON.parse(await file.text());if(!obj || obj.schemaVersion!==1 || !Array.isArray(obj.projects) || !obj.projects.every(p=>typeof p.id==='string' && typeof p.title==='string'))throw Error('Not a Project Compass V1 backup.');if(!confirm(`Replace your current ${state.projects.length} records with ${obj.projects.length} imported records? Export your current data first if needed.`))return;const candidate={schemaVersion:1,projects:obj.projects,settings:obj.settings||{theme:'dark'},demo:!!obj.demo};await save(candidate);state=candidate;closeModal();view='dashboard';render();toast('Backup imported successfully');}catch(e){toast(`Import failed: ${e.message}`);}}
 async function boot(){try{const res=await fetch('/api/state');if(!res.ok)throw Error('Cannot connect to local server');state=await res.json();themeSync();render();}catch(err){console.error(err);$('#content').innerHTML=`<div class="empty"><h2>Cannot connect to Project Compass</h2><p>Start <code>server.py</code>, then refresh this page.</p></div>`;$('#saveStatus').textContent='● Offline';$('#saveStatus').classList.add('error');}}
 $$('.nav-item').forEach(b=>b.onclick=()=>{view=b.dataset.view;query='';filter='all';render();$('#sidebar').classList.remove('open');});
 $('#addBtn').onclick=()=>addModal('project');
-$('#themeBtn').onclick=()=>{state.settings.theme=state.settings.theme==='dark'?'light':'dark';commit();};
+$('#themeBtn').onclick=()=>{state.settings.theme=(state.settings.theme||'dark')==='dark'?'light':'dark';commit();};
 $('#menuBtn').onclick=()=>$('#sidebar').classList.toggle('open');
 $('#modalBackdrop').onclick=e=>{if(e.target===$('#modalBackdrop'))closeModal();};
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal();});
